@@ -1,44 +1,38 @@
 import axios from "axios";
-import * as cheerio from "cheerio";
 
 export default async function handler(req, res) {
   try {
-    const url = "https://giavang.net/gia-vang-sjc/";
+    const url = "https://tygia.com/json.php?ran=0&rate=0&gold=1";
 
     const response = await axios.get(url, {
       timeout: 15000,
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
-        "Accept-Language": "vi-VN,vi;q=0.9",
       },
     });
 
-    const $ = cheerio.load(response.data);
+    const data = response.data;
 
-    let buy = null;
-    let sell = null;
+    if (!data || !data.gold || !Array.isArray(data.gold)) {
+      throw new Error("Dữ liệu vàng không hợp lệ");
+    }
 
-    $("tr").each((_, el) => {
-      const tds = $(el).find("td");
-      const text = $(el).text();
+    // Tìm SJC
+    const sjc = data.gold.find(
+      (item) => item.brand && item.brand.includes("SJC")
+    );
 
-      if (text.includes("SJC") && tds.length >= 3) {
-        buy = tds.eq(1).text().trim();
-        sell = tds.eq(2).text().trim();
-      }
-    });
-
-    if (!buy || !sell) {
-      throw new Error("Không parse được giá SJC từ giavang.net");
+    if (!sjc) {
+      throw new Error("Không tìm thấy SJC trong dữ liệu");
     }
 
     res.status(200).json({
-      brand: "SJC",
-      buy,
-      sell,
+      brand: sjc.brand,
+      buy: sjc.buy,
+      sell: sjc.sell,
       unit: "VND/lượng",
-      source: "giavang.net",
+      source: "tygia.com",
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {
