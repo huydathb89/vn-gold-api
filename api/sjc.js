@@ -3,38 +3,39 @@ import cheerio from "cheerio";
 
 export default async function handler(req, res) {
   try {
-    const url = "https://giavangonline.com/";
+    const url = "https://sjc.com.vn/giavang/textContent.php";
 
-    const { data } = await axios.get(url, {
+    const response = await axios.get(url, {
+      timeout: 10000,
       headers: {
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
       },
-      timeout: 10000
     });
 
-    const $ = cheerio.load(data);
+    const $ = cheerio.load(response.data);
 
-    // Lấy dòng SJC
-    const row = $("tr")
-      .filter((i, el) => $(el).text().includes("SJC"))
-      .first();
+    const rows = $("table tbody tr");
 
-    const tds = row.find("td");
+    if (rows.length === 0) {
+      throw new Error("Không parse được bảng giá");
+    }
 
-    const buy = $(tds[1]).text().trim();
-    const sell = $(tds[2]).text().trim();
+    const firstRow = rows.first().find("td");
 
-    res.status(200).json({
+    const data = {
       brand: "SJC",
-      buy,
-      sell,
-      updatedAt: new Date().toLocaleString("vi-VN")
-    });
+      buy: firstRow.eq(1).text().trim(),
+      sell: firstRow.eq(2).text().trim(),
+      unit: "VND/lượng",
+      updatedAt: new Date().toISOString(),
+    };
 
-  } catch (err) {
+    res.status(200).json(data);
+  } catch (error) {
     res.status(500).json({
-      error: "Không lấy được giá vàng",
-      detail: err.message
+      error: true,
+      message: error.message,
     });
   }
 }
