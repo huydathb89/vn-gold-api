@@ -3,7 +3,7 @@ import * as cheerio from "cheerio";
 
 export default async function handler(req, res) {
   try {
-    const url = "https://sjc.com.vn/giavang/textContent.php";
+    const url = "https://giavang.net/gia-vang-sjc/";
 
     const response = await axios.get(url, {
       timeout: 10000,
@@ -15,19 +15,20 @@ export default async function handler(req, res) {
 
     const $ = cheerio.load(response.data);
 
-    const rows = $("table tbody tr");
+    const row = $("table tbody tr").first();
 
-    if (rows.length === 0) {
-      throw new Error("Không parse được bảng giá");
+    if (!row.length) {
+      throw new Error("Không lấy được dữ liệu SJC");
     }
 
-    const firstRow = rows.first().find("td");
+    const cols = row.find("td");
 
     const data = {
       brand: "SJC",
-      buy: firstRow.eq(1).text().trim(),
-      sell: firstRow.eq(2).text().trim(),
+      buy: cols.eq(1).text().trim(),
+      sell: cols.eq(2).text().trim(),
       unit: "VND/lượng",
+      source: "giavang.net",
       updatedAt: new Date().toISOString(),
     };
 
